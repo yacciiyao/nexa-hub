@@ -4,35 +4,46 @@
 @Date: 2025-10-29 14:52
 @Desc: OpenAI 聊天接口
 """
+from typing import Optional, List, Dict
+
 from openai import OpenAI
 
+from bots.base_bot import BaseBot
 from infrastructure.config_manager import conf
 from infrastructure.logger import logger
 
 
-class OpenAIBot:
-    def __init__(self):
+class OpenAIBot(BaseBot):
+    """ OpenAI 聊天模型, 通过 model_name 区分不同模型 """
+
+    def __init__(self, model_name: Optional[str] = None):
         api_key = conf().get('openai_api_key')
-        base_url = conf().get('openai_base_url')
         if not api_key:
             raise Exception('OpenAI API key not found.')
+
+        base_url = conf().get('openai_base_url')
+
+        self.model_name = model_name or (conf().get('openai_model', "gpt-3.5-turbo"))
 
         self.client = OpenAI(api_key=api_key, base_url=base_url)
 
     def reply(self, query: str, context=None):
-        """ 核心对话方法 """
-        logger.info(f"[OpenAIBot] 接收到消息: {query}")
+        return self.reply_with_context([{"role": "user", "content": query}])
+
+    def reply_with_context(self, messages: List[Dict[str, str]]) -> str:
         try:
+            logger.info(f"[OpenAIBot] model={self.model_name}, {messages}={len(messages)}")
+
             response = self.client.chat.completions.create(
-                model=conf().get('openai_model', "gpt-3.5-turbo"),
-                messages=[{"role": "user", "content": query}],
+                model=self.model_name,
+                messages=messages,
             )
 
             content = response.choices[0].message.content
-            logger.info(f"[OpenAIBot] 回复: {content}")
+
             return content
 
         except Exception as e:
             logger.error(f"[OpenAIBot] 调用失败: {e}")
-            return f"调用模型出错: {e}"
+            return f"模型调用出错: {e}"
 
