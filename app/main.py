@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from starlette.responses import JSONResponse
 
-from app.routers import chat_api, model_api
+from app.routers import chat_api, model_api, knowledge_api
 from infrastructure.config_manager import config
 from infrastructure.logger import logger
 
@@ -31,6 +31,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Nexa-Hub", version="1.1.0", lifespan=lifespan,)
     app.include_router(chat_api.router)
     app.include_router(model_api.router)
+    app.include_router(knowledge_api.router)
 
     @app.get("/")
     async def index():
