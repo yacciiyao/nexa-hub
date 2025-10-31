@@ -1,0 +1,16 @@
+{
+  "openai_api_key": "",
+  "openai_base_url": "",
+  "openai_model": "gpt-3.5-turbo",
+  "rag": {
+    "store_dir": "./data/vector_stores",
+    "default_namespace": "default",
+    "embedding": {
+      "provider": "openai",
+      "model_name": "text-embedding-3-small"
+    },
+    "chunk_size": 800,
+    "chunk_overlap": 150,
+    "top_k": 5
+  }
+}

@@ -48,6 +48,6 @@ class KnowledgeQuery(BaseModel):
 
 @router.post("/query")
 async def query_knowledge(query: KnowledgeQuery):
-    answer = rag.query(question=query.question, namespace=query.namespace, model_key=query.model, top_k=query.top_k)
+    answer = rag.query(question=query.question, namespace=query.namespace, model_name=query.model, top_k=query.top_k)
 
     return {"answer": answer, "namespace": query.namespace or conf().get("rag", {}).get("default_namespace", "default")}

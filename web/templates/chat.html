@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Nexa-Hub · Chat</title>
   <style>
-    /* 页面整体：占满视窗，高度自适应，底部输入栏始终可见 */
     html, body {
       height: 100%;
       margin: 0;
@@ -22,19 +21,20 @@
       box-shadow: 0 2px 16px rgba(0,0,0,.06);
     }
 
-    /* 顶部 */
     .header {
       padding: 12px 16px;
       font-weight: 700;
       font-size: 20px;
       border-bottom: 1px solid #eee;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
     .toolbar {
       padding: 8px 16px;
       border-bottom: 1px solid #f2f2f2;
     }
 
-    /* 对话区域：可滚动，占据剩余空间 */
     .chat {
       flex: 1;
       overflow-y: auto;
@@ -42,7 +42,6 @@
       background: #f6f6f6;
     }
 
-    /* 微信风格：左右两侧消息 */
     .msg-row {
       display: flex;
       align-items: flex-end;
@@ -64,14 +63,13 @@
       border-radius: 8px;
       line-height: 1.5;
       word-break: break-word;
-      background: #fff;           /* AI：白色 */
+      background: #fff;
       box-shadow: 0 1px 1px rgba(0,0,0,.03);
     }
     .right .bubble {
-      background: #9fe770;        /* 你：绿色 */
+      background: #9fe770;
     }
 
-    /* 底部输入栏：粘在容器底部，不遮挡 */
     .composer {
       position: sticky; bottom: 0; left: 0; right: 0;
       padding: 10px 12px;
@@ -96,26 +94,41 @@
     }
     .composer button:disabled { opacity: .6; cursor: not-allowed; }
 
-    /* 让聊天区底部留出一点空间，避免被粘性输入栏视觉挤压 */
     .chat-bottom-spacer { height: 8px; }
+
+    .toolbar button {
+      margin-left: 8px;
+      padding: 4px 10px;
+      background: #eee;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .toolbar button:hover {
+      background: #ddd;
+    }
   </style>
 </head>
 <body>
   <div class="app">
-    <div class="header">Nexa-Hub - AI Chat</div>
+    <div class="header">
+      <span>Nexa-Hub - AI Chat</span>
+      <small id="session-label" style="color:#888;font-size:12px;"></small>
+    </div>
 
     <div class="toolbar">
-      选择模型：
+      模型：
       <select id="model">
         <option value="openai:gpt-3.5">OpenAI GPT-3.5</option>
         <option value="openai:gpt-4o-mini">OpenAI GPT-4o mini</option>
         <option value="qwen:turbo">Qwen Turbo</option>
         <option value="gemini:1.5">Gemini 1.5</option>
       </select>
+      <button id="newSession">新会话</button>
+      <button id="clearChat">清空对话</button>
     </div>
 
     <div id="chat" class="chat">
-      <!-- 示例首条欢迎语（可删） -->
       <div class="msg-row left">
         <img class="avatar" src="https://via.placeholder.com/72x72.png?text=AI" alt="AI">
         <div class="bubble">你好，我是你的 AI 助手～</div>
@@ -130,15 +143,32 @@
   </div>
 
   <script>
-    // —— 配置：不要写死后端 —— 可改成你的实际地址
+    // 后端接口配置
     const API_BASE = localStorage.getItem('NEXA_API') || 'http://127.0.0.1:8000';
     const CHAT_API = `${API_BASE}/api/chat/`;
+    const CLEAR_API = `${API_BASE}/api/chat/clear`;
 
+    // 元素引用
     const chatEl = document.getElementById('chat');
     const input  = document.getElementById('q');
     const sendBtn= document.getElementById('send');
     const modelEl= document.getElementById('model');
+    const sessionLabel = document.getElementById('session-label');
 
+    // 生成唯一会话ID
+    function generateSessionId() {
+      return 'sess-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 8);
+    }
+
+    // 从 localStorage 恢复或新建会话
+    let currentSessionId = localStorage.getItem('NEXA_SESSION_ID');
+    if (!currentSessionId) {
+      currentSessionId = generateSessionId();
+      localStorage.setItem('NEXA_SESSION_ID', currentSessionId);
+    }
+    sessionLabel.textContent = `会话: ${currentSessionId}`;
+
+    // 添加消息气泡
     function addMsg({side, text}) {
       const row = document.createElement('div');
       row.className = `msg-row ${side}`;
@@ -165,16 +195,15 @@
       chatEl.scrollTop = chatEl.scrollHeight;
     }
 
+    // 发送消息
     async function send() {
       const text = input.value.trim();
       if (!text) return;
 
-      // 先显示用户消息
       addMsg({side: 'right', text});
       input.value = '';
       input.focus();
 
-      // 调后端
       sendBtn.disabled = true;
       try {
         const res = await fetch(CHAT_API, {
@@ -183,25 +212,49 @@
           body: JSON.stringify({
             query: text,
             model: modelEl.value,
-            session_id: 'web-default'
+            session_id: currentSessionId
           })
         });
         const data = await res.json();
-        const aiText = data.text || data.answer || JSON.stringify(data);
+        const aiText = data.data?.text || data.text || data.answer || JSON.stringify(data);
         addMsg({side: 'left', text: aiText});
       } catch (e) {
-        addMsg({side: 'left', text: '请求失败，请检查后端服务或跨域设置。'});
+        addMsg({side: 'left', text: '❌ 请求失败，请检查后端服务或跨域设置。'});
       } finally {
         sendBtn.disabled = false;
       }
     }
 
-    sendBtn.addEventListener('click', send);
-    input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') send(); });
+    // 清空当前会话（后端 + 前端）
+    async function clearChat() {
+      if (!confirm('确定清空当前对话？')) return;
+      chatEl.innerHTML = '';
+      addMsg({side: 'left', text: '会话已清空。'});
 
-    // 小提示：修改后端地址时可在浏览器控制台执行：
-    // localStorage.setItem('NEXA_API','http://localhost:8000')
-    // 然后强刷（Ctrl/Cmd + F5）或在 URL 加 ?v=2 避免缓存
+      try {
+        await fetch(CLEAR_API, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ session_id: currentSessionId })
+        });
+      } catch (e) {
+        console.warn('清空失败:', e);
+      }
+    }
+
+    // 新建会话
+    function newSession() {
+      currentSessionId = generateSessionId();
+      localStorage.setItem('NEXA_SESSION_ID', currentSessionId);
+      sessionLabel.textContent = `会话: ${currentSessionId}`;
+      chatEl.innerHTML = '';
+      addMsg({side: 'left', text: '✨ 新会话已创建。'});
+    }
+
+    sendBtn.addEventListener('click', send);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+    document.getElementById('clearChat').addEventListener('click', clearChat);
+    document.getElementById('newSession').addEventListener('click', newSession);
   </script>
 </body>
 </html>

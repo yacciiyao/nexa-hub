@@ -41,7 +41,7 @@ nexa-hub/
 │
 ├── web/
 │   └── templates/
-│       └── chat.html           # 前端聊天界面（微信风格）
+│       └── chat.html           # 前端聊天界面
 │
 ├── data/
 │   ├── uploads/                # 上传文件临时目录
@@ -61,14 +61,25 @@ pip install -r requirements.txt
 ```
 
 ### 2️⃣ 配置环境变量
-在系统环境或 `.env` 文件中添加：
+### 2️⃣ 配置项目参数
+请将项目根目录下的 `config_template.json` 复制为 `config.json`：
 
 ```bash
-OPENAI_API_KEY=sk-xxxx
-OPENAI_BASE_URL=https://api.openai.com/v1
+cp config_template.json config.json
 ```
 
-如果使用其他模型（如 Qwen、Gemini），可在 `config.json` 中添加对应 key。
+然后在 `config.json` 中配置对应参数，例如：
+
+```json
+{
+  "openai_api_key": "sk-xxxx",
+  "openai_base_url": "https://api.openai.com/v1",
+  "default_model": "openai:gpt-3.5",
+  "allowed_models": ["openai:gpt-3.5", "qwen:turbo", "gemini:1.5"]
+}
+```
+
+> 如使用其他模型（如 Qwen、Gemini），在此文件中添加相应的配置项。
 
 ### 3️⃣ 启动后端服务
 ```bash
@@ -89,12 +100,12 @@ http://127.0.0.1:8000/api/knowledge/query
 
 ```bash
 cd web/templates
-python -m http.server 63342
+python -m http.server 7979
 ```
 
 然后访问：
 ```
-http://127.0.0.1:63342/chat.html
+http://127.0.0.1:7979/chat.html
 ```
 
 > 💬 聊天页面为微信风格布局，用户消息在右侧，AI 回复在左侧。
