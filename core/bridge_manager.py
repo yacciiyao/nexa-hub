@@ -16,7 +16,8 @@ class BridgeManager:
     def __init__(self):
         self.models = model_registry
 
-    def handle_message(self, query: str, model_name: str, session_id: str) -> Reply:
+    def handle_message(self, query: str, model_name: str, session_id: str, user_id: int) -> Reply:
+
         logger.info(f"[BridgeManager] query={query[:40]}, model={model_name}, session={session_id}")
 
         bot = self.models.get_model(model_name)
@@ -28,7 +29,7 @@ class BridgeManager:
             )
 
         # 从 Dialogue 获取上下文
-        history = dialog_service.get_context(session_id)
+        history = dialog_service.get_context(user_id=user_id, session_id=session_id)
         message = history + [{"role": "user", "content": query}]
 
         # 模型生成回复
@@ -38,7 +39,7 @@ class BridgeManager:
         dialog_service.append_message(session_id, "user", query)
         dialog_service.append_message(session_id, "assistant", answer)
 
-        return Reply(text=answer, model=model_name, session_id=session_id)
+        return Reply(text=answer, model=model_name, user_id=user_id, session_id=session_id)
 
 
 bridge = BridgeManager()

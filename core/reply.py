@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 class Reply(BaseModel):
     """ 标准的回复输出 """
-    text: str
-    model: str
+    user_id: int
     session_id: str
+    model: str
+    text: str

@@ -60,7 +60,6 @@ nexa-hub/
 pip install -r requirements.txt
 ```
 
-### 2️⃣ 配置环境变量
 ### 2️⃣ 配置项目参数
 请将项目根目录下的 `config_template.json` 复制为 `config.json`：
 

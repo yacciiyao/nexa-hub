@@ -8,17 +8,88 @@
     html, body {
       height: 100%;
       margin: 0;
-      background: #f4f4f4;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+      background: #f5f5f5;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
     }
-    .app {
+
+    .layout {
+      display: flex;
       height: 100%;
-      max-width: 900px;
-      margin: 0 auto;
+    }
+
+    /* ===== 左侧侧边栏 ===== */
+    .sidebar {
+      width: 260px;
+      background: #f9f9f9;
+      border-right: 1px solid #ddd;
       display: flex;
       flex-direction: column;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    .sidebar h2 {
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      text-align: center;
+      color: #333;
+    }
+
+    .session-list {
+      flex: 1;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+
+    .session-item {
+      padding: 8px 10px;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .session-item.active {
+      background: #25a244;
+      color: #fff;
+    }
+
+    .session-item button {
+      background: transparent;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .new-session-btn {
+      padding: 8px;
+      background: #25a244;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+
+    /* ===== 右侧主区域 ===== */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .app {
+      width: 1000px; /* 固定宽度 */
+      height: 100%;
       background: #fff;
-      box-shadow: 0 2px 16px rgba(0,0,0,.06);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
     .header {
@@ -26,20 +97,36 @@
       font-weight: 700;
       font-size: 20px;
       border-bottom: 1px solid #eee;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      text-align: center;
     }
+
     .toolbar {
       padding: 8px 16px;
       border-bottom: 1px solid #f2f2f2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    select {
+      padding: 4px 8px;
+      border-radius: 4px;
     }
 
     .chat {
       flex: 1;
       overflow-y: auto;
-      padding: 16px 12px 8px;
+      padding: 16px 12px;
       background: #f6f6f6;
+    }
+
+    .chat:empty::before {
+      content: "👋 你好，我是你的 AI 助手，开始聊天吧～";
+      text-align: center;
+      color: #aaa;
+      display: block;
+      margin-top: 80px;
+      font-size: 15px;
     }
 
     .msg-row {
@@ -49,6 +136,7 @@
       margin: 10px 0;
       max-width: 80%;
     }
+
     .left  { justify-content: flex-start; }
     .right { justify-content: flex-end; margin-left: auto; }
 
@@ -66,17 +154,19 @@
       background: #fff;
       box-shadow: 0 1px 1px rgba(0,0,0,.03);
     }
+
     .right .bubble {
       background: #9fe770;
     }
 
     .composer {
-      position: sticky; bottom: 0; left: 0; right: 0;
       padding: 10px 12px;
       background: #fff;
       border-top: 1px solid #eee;
-      display: flex; gap: 10px;
+      display: flex;
+      gap: 10px;
     }
+
     .composer input[type="text"]{
       flex: 1;
       padding: 10px 12px;
@@ -86,103 +176,77 @@
       font-size: 14px;
       background: #fafafa;
     }
+
     .composer button{
       padding: 8px 16px;
       border: none;
       border-radius: 18px;
       background: #25a244; color: #fff; cursor: pointer;
     }
-    .composer button:disabled { opacity: .6; cursor: not-allowed; }
 
-    .chat-bottom-spacer { height: 8px; }
-
-    .toolbar button {
-      margin-left: 8px;
-      padding: 4px 10px;
-      background: #eee;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .toolbar button:hover {
-      background: #ddd;
+    .composer button:disabled {
+      opacity: .6; cursor: not-allowed;
     }
   </style>
 </head>
 <body>
-  <div class="app">
-    <div class="header">
-      <span>Nexa-Hub - AI Chat</span>
-      <small id="session-label" style="color:#888;font-size:12px;"></small>
+  <div class="layout">
+
+    <!-- 左侧会话管理栏 -->
+    <div class="sidebar">
+      <h2>💬 会话列表</h2>
+      <button class="new-session-btn" onclick="newSession()">➕ 新建会话</button>
+      <div id="session-list" class="session-list"></div>
     </div>
 
-    <div class="toolbar">
-      模型：
-      <select id="model">
-        <option value="openai:gpt-3.5">OpenAI GPT-3.5</option>
-        <option value="openai:gpt-4o-mini">OpenAI GPT-4o mini</option>
-        <option value="qwen:turbo">Qwen Turbo</option>
-        <option value="gemini:1.5">Gemini 1.5</option>
-      </select>
-      <button id="newSession">新会话</button>
-      <button id="clearChat">清空对话</button>
-    </div>
+    <!-- 右侧主界面 -->
+    <div class="main">
+      <div class="app">
+        <div class="header">Nexa-Hub - AI Chat</div>
 
-    <div id="chat" class="chat">
-      <div class="msg-row left">
-        <img class="avatar" src="https://via.placeholder.com/72x72.png?text=AI" alt="AI">
-        <div class="bubble">你好，我是你的 AI 助手～</div>
+        <div class="toolbar">
+          模型：
+          <select id="model">
+            <option value="openai:gpt-3.5">OpenAI GPT-3.5</option>
+            <option value="openai:gpt-4o-mini">OpenAI GPT-4o mini</option>
+            <option value="qwen:turbo">Qwen Turbo</option>
+            <option value="gemini:1.5">Gemini 1.5</option>
+          </select>
+        </div>
+
+        <div id="chat" class="chat"></div>
+
+        <div class="composer">
+          <input id="q" type="text" placeholder="请输入问题…" />
+          <button id="send">发送</button>
+        </div>
       </div>
-      <div class="chat-bottom-spacer"></div>
-    </div>
-
-    <div class="composer">
-      <input id="q" type="text" placeholder="请输入问题…" />
-      <button id="send">发送</button>
     </div>
   </div>
 
   <script>
-    // 后端接口配置
-    const API_BASE = localStorage.getItem('NEXA_API') || 'http://127.0.0.1:8000';
-    const CHAT_API = `${API_BASE}/api/chat/`;
-    const CLEAR_API = `${API_BASE}/api/chat/clear`;
+    const API_BASE = 'http://127.0.0.1:8000';
+    const userId = 'guest';
+    let sessionId = null;
 
-    // 元素引用
     const chatEl = document.getElementById('chat');
-    const input  = document.getElementById('q');
-    const sendBtn= document.getElementById('send');
-    const modelEl= document.getElementById('model');
-    const sessionLabel = document.getElementById('session-label');
+    const sendBtn = document.getElementById('send');
+    const input = document.getElementById('q');
+    const modelEl = document.getElementById('model');
+    const sessionListEl = document.getElementById('session-list');
 
-    // 生成唯一会话ID
-    function generateSessionId() {
-      return 'sess-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 8);
-    }
-
-    // 从 localStorage 恢复或新建会话
-    let currentSessionId = localStorage.getItem('NEXA_SESSION_ID');
-    if (!currentSessionId) {
-      currentSessionId = generateSessionId();
-      localStorage.setItem('NEXA_SESSION_ID', currentSessionId);
-    }
-    sessionLabel.textContent = `会话: ${currentSessionId}`;
-
-    // 添加消息气泡
+    // 添加消息
     function addMsg({side, text}) {
       const row = document.createElement('div');
       row.className = `msg-row ${side}`;
-
       const avatar = document.createElement('img');
       avatar.className = 'avatar';
       avatar.src = side === 'right'
         ? 'https://via.placeholder.com/72x72.png?text=Me'
         : 'https://via.placeholder.com/72x72.png?text=AI';
-
       const bubble = document.createElement('div');
       bubble.className = 'bubble';
       bubble.textContent = text;
-
       if (side === 'left') {
         row.appendChild(avatar);
         row.appendChild(bubble);
@@ -190,71 +254,115 @@
         row.appendChild(bubble);
         row.appendChild(avatar);
       }
-
       chatEl.appendChild(row);
       chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    // 创建新会话
+    async function newSession() {
+      const res = await fetch(`${API_BASE}/api/chat/start`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ user_id: userId })
+      });
+      const data = await res.json();
+      sessionId = data.session_id;
+      localStorage.setItem('nexa_session_id', sessionId);
+      chatEl.innerHTML = '';
+      addMsg({side:'left', text:'你好，我是你的 AI 助手～'});
+      await loadSessions();
+    }
+
+    // 加载会话列表
+    async function loadSessions() {
+      const res = await fetch(`${API_BASE}/api/chat/sessions?user_id=${userId}`);
+      const data = await res.json();
+      const sessions = data.sessions || [];
+      sessionListEl.innerHTML = '';
+      sessions.forEach(sid => {
+        const item = document.createElement('div');
+        item.className = 'session-item' + (sid === sessionId ? ' active' : '');
+        item.textContent = sid.slice(0, 8);
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '🗑️';
+        delBtn.onclick = (e) => {
+          e.stopPropagation();
+          clearSession(sid);
+        };
+        item.appendChild(delBtn);
+        item.onclick = () => switchSession(sid);
+        sessionListEl.appendChild(item);
+      });
+    }
+
+    // 切换会话
+    async function switchSession(sid) {
+      sessionId = sid;
+      localStorage.setItem('nexa_session_id', sid);
+      chatEl.innerHTML = '';
+      addMsg({side:'left', text:`已切换到会话 ${sid.slice(0,8)}。`});
+      await loadSessions();
+    }
+
+    // 删除会话
+    async function clearSession(sid) {
+      await fetch(`${API_BASE}/api/chat/clear`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ user_id: userId, session_id: sid })
+      });
+      if (sessionId === sid) chatEl.innerHTML = '';
+      await loadSessions();
     }
 
     // 发送消息
     async function send() {
       const text = input.value.trim();
       if (!text) return;
+      if (!sessionId) await newSession();
 
       addMsg({side: 'right', text});
       input.value = '';
-      input.focus();
-
       sendBtn.disabled = true;
+
       try {
-        const res = await fetch(CHAT_API, {
+        const res = await fetch(`${API_BASE}/api/chat/`, {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({
             query: text,
             model: modelEl.value,
-            session_id: currentSessionId
+            user_id: userId,
+            session_id: sessionId
           })
         });
+
         const data = await res.json();
-        const aiText = data.data?.text || data.text || data.answer || JSON.stringify(data);
-        addMsg({side: 'left', text: aiText});
-      } catch (e) {
-        addMsg({side: 'left', text: '❌ 请求失败，请检查后端服务或跨域设置。'});
+
+        if (!data.ok) {
+          addMsg({side: 'left', text: `❌ 出错: ${data.error || '未知错误'}`});
+        } else if (data.data) {
+          const aiText = data.data.text || '[无响应]';
+          addMsg({side: 'left', text: aiText});
+          sessionId = data.data.session_id || sessionId;
+        }
+
+      } catch (err) {
+        addMsg({side: 'left', text: '⚠️ 请求失败，请检查服务器或网络'});
       } finally {
         sendBtn.disabled = false;
       }
     }
 
-    // 清空当前会话（后端 + 前端）
-    async function clearChat() {
-      if (!confirm('确定清空当前对话？')) return;
-      chatEl.innerHTML = '';
-      addMsg({side: 'left', text: '会话已清空。'});
-
-      try {
-        await fetch(CLEAR_API, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ session_id: currentSessionId })
-        });
-      } catch (e) {
-        console.warn('清空失败:', e);
-      }
-    }
-
-    // 新建会话
-    function newSession() {
-      currentSessionId = generateSessionId();
-      localStorage.setItem('NEXA_SESSION_ID', currentSessionId);
-      sessionLabel.textContent = `会话: ${currentSessionId}`;
-      chatEl.innerHTML = '';
-      addMsg({side: 'left', text: '✨ 新会话已创建。'});
-    }
-
     sendBtn.addEventListener('click', send);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
-    document.getElementById('clearChat').addEventListener('click', clearChat);
-    document.getElementById('newSession').addEventListener('click', newSession);
+    input.addEventListener('keydown', (e) => { if (e.key==='Enter') send(); });
+
+    // 初始化
+    window.addEventListener('load', async () => {
+      sessionId = localStorage.getItem('nexa_session_id');
+      if (!sessionId) await newSession();
+      else await loadSessions();
+    });
   </script>
 </body>
 </html>
