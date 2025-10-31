@@ -4,6 +4,8 @@
 @Date: 2025-10-29 14:52
 @Desc:
 """
+from typing import Optional
+
 from pydantic import BaseModel
 
 
@@ -11,5 +13,6 @@ class Reply(BaseModel):
     """ 标准的回复输出 """
     user_id: int
     session_id: str
+    session_name: Optional[str] = None
     model: str
     text: str

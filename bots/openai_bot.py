@@ -16,21 +16,31 @@ from infrastructure.logger import logger
 class OpenAIBot(BaseBot):
     """ OpenAI 聊天模型, 通过 model_name 区分不同模型 """
 
+    family = "openai"
+    display_name = "OpenAI Chat Models"
+    models_info = {
+        "openai:gpt-3.5-turbo": {"name": "GPT-3.5 Turbo", "desc": "经典稳定版，适合常规任务"},
+        "openai:gpt-4o-mini": {"name": "GPT-4o Mini", "desc": "轻量快速版 GPT-4"},
+        "openai:gpt-4o": {"name": "GPT-4o", "desc": "旗舰多模态模型"},
+    }
+
     def __init__(self, model_name: Optional[str] = None):
-        api_key = conf().get('openai_api_key')
+        cfg = conf().as_dict()
+
+        api_key = cfg.get('openai_api_key')
         if not api_key:
             raise Exception('OpenAI API key not found.')
 
-        base_url = conf().get('openai_base_url')
+        base_url = cfg.get('openai_base_url', "https://api.openai.com/v1")
 
-        self.model_name = model_name or (conf().get('openai_model', "gpt-3.5-turbo"))
-
+        self.model_name = model_name or (cfg.get('openai_default_model', "gpt-3.5-turbo"))
         self.client = OpenAI(api_key=api_key, base_url=base_url)
 
     def reply(self, query: str, context=None):
         return self.reply_with_context([{"role": "user", "content": query}])
 
     def reply_with_context(self, messages: List[Dict[str, str]]) -> str:
+
         try:
             logger.info(f"[OpenAIBot] model={self.model_name}, {messages}={len(messages)}")
 

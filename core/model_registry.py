@@ -4,7 +4,7 @@
 @Date: 2025-10-29 14:51
 @Desc:
 """
-from typing import Dict, Callable
+from typing import Dict, Tuple, Type
 
 from bots.openai_bot import OpenAIBot
 from infrastructure.logger import logger
@@ -14,30 +14,58 @@ class ModelRegistry:
     """ 模型注册中心 """
 
     def __init__(self):
-        self._factories: Dict[str, Callable[[], object]] = {}
+        self._factories: Dict[str, Tuple[Type, Dict]] = {}
         self._instances: Dict[str, object] = {}
         self._bootstrap_default()
 
     def _bootstrap_default(self):
-        self.register("openai:gpt-3.5", lambda: OpenAIBot(model_name="gpt-3.5-turbo"))
-        self.register("openai:gpt-4o-mini", lambda: OpenAIBot(model_name="gpt-4o-mini"))
+        """注册系统默认可用模型"""
+        self.register("openai:gpt-3.5", OpenAIBot, model_name="gpt-3.5-turbo")
+        self.register("openai:gpt-4o-mini", OpenAIBot, model_name="gpt-4o-mini")
 
-    def register(self, name: str, factory: Callable[[], object]) -> None:
-        logger.info(f"[ModelRegister] 注册模型: {name}")
-        self._factories[name] = factory
+        logger.info(f"[ModelRegistry] 默认模型注册完成: {list(self._factories.keys())}")
+
+    def register(self, name: str, bot_cls: Type, **kwargs):
+        """注册模型工厂"""
+        logger.info(f"[ModelRegistry] 注册模型: {name}")
+        self._factories[name] = (bot_cls, kwargs)
 
     def get_model(self, name: str):
+        """获取模型实例（懒加载）"""
         if name not in self._instances:
             if name not in self._factories:
                 raise ValueError(f"未知模型: {name}")
 
-            logger.info(f"[ModelRegister] 初始化模型: {name}")
-
-            self._instances[name] = self._factories[name]()
-
+            bot_cls, kwargs = self._factories[name]
+            logger.info(f"[ModelRegistry] 初始化模型: {name}")
+            self._instances[name] = bot_cls(**kwargs)
         return self._instances[name]
 
-    def list_models(self):
-        return list(self._factories.keys())
+    def get_available_models(self):
+        """返回可用模型清单"""
+        models = []
+        for name, (bot_cls, _) in self._factories.items():
+            info = getattr(bot_cls, "models_info", {}).get(name, {})
+            models.append({
+                "id": name,
+                "name": info.get("name", name),
+                "desc": info.get("desc", ""),
+                "family": getattr(bot_cls, "family", "unknown"),
+            })
+        return models
 
-model_registry = ModelRegistry()
+
+_model_registry = None
+
+
+def get_model_registry() -> ModelRegistry:
+    """安全获取模型注册中心单例"""
+    global _model_registry
+    if _model_registry is None:
+        _model_registry = ModelRegistry()
+    return _model_registry
+
+
+print("[DEBUG] model_registry initialized:", '_model_registry' in globals())
+if '_model_registry' in globals():
+    print("[DEBUG] 已注册模型 keys:", list(get_model_registry()._factories.keys()))

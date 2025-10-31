@@ -23,8 +23,10 @@ class RagPipeline:
     """ RAG: 文档入库 + 检索增强问答"""
 
     def __init__(self):
-        self.default_namespace = conf().get("rag", {}).get("default_namespace", "default")
-        self.top_k = conf().get("rag", {}).get("top_k", 5)
+        cfg = conf().get("rag", {})
+        self.default_namespace = cfg.get("default_namespace", "default")
+        self.available_namespaces = cfg.get("available_namespaces", [])
+        self.top_k = cfg.get("top_k", 5)
 
     def index_file(self, file_path: str, namespace: Optional[str] = None) -> int:
         """ 索引构建 """
@@ -47,20 +49,24 @@ class RagPipeline:
         logger.info(f"[RAG] indexed {len(chunks)} documents into namespace {ns}")
         return len(chunks)
 
-    def query(self, question: str, namespace: Optional[str] = None, model_key: Optional[str]=None, top_k: Optional[int] = None) -> str:
+    def query(self, question: str, namespace: Optional[str] = None, model: Optional[str] = None,
+              top_k: Optional[int] = None) -> str:
         ns = namespace or self.default_namespace
         k = top_k or self.top_k
 
         embedding = get_embedding()
 
+        if self.available_namespaces and ns not in self.available_namespaces:
+            return f"知识库 `{ns}` 未授权访问"
+
         vs = vectorstore.load(ns, embedding)
         if vs is None:
-            return f"知识库 `{ns}` 不存在, 请先上传文档"
+            return f"知识库 `{ns}` 不存在, 请联系管理员先上传文档"
 
         retriever = vs.as_retriever(search_kwargs={"k": k})
 
         # 可以从 ModelRegistry 动态获取模型, 这里先用 OpenAI
-        llm_model = conf().get("default_model", "gpt-3.5-turbo")
+        llm_model = model or conf().get("default_model", "gpt-3.5-turbo")
 
         api_key = conf().get("openai_api_key")
         base_url = conf().get("openai_base_url")
@@ -87,5 +93,6 @@ class RagPipeline:
         answer = qa.run(query=question)
 
         return answer
+
 
 rag = RagPipeline()

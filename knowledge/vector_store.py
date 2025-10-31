@@ -22,7 +22,7 @@ class VectorStoreManager:
         self.store_dir.mkdir(parents=True, exist_ok=True)
 
     def _ns_path(self, namespace: str) -> Path:
-        return self.store_dir / f"{namespace}.txt"
+        return self.store_dir / namespace
 
     def save(self, vs: FAISS, namespace: str):
         ns_path = self._ns_path(namespace)

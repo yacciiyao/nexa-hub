@@ -17,6 +17,7 @@ try:
 except:
     HAS_SBERT = False
 
+
 def get_embedding() -> Any:
     rag_cfg = conf().get("rag", {})
     provider = rag_cfg.get("embedding", {}).get("provider", "openai")
@@ -25,14 +26,19 @@ def get_embedding() -> Any:
     if provider == "openai":
         api_key = conf().get("openai_api_key")
         base_url = conf().get("openai_base_url")
+
         logger.info(f"[Embeddings] provider={provider} model={model_name}")
+
         return OpenAIEmbeddings(api_key=api_key, base_url=base_url, model=model_name)
 
     elif provider == "sbert":
-        if not HAS_SBERT:
-            raise RuntimeError(f"未安装 sentence-transformers，请安装依赖或使用其他模型。")
 
         logger.info(f"[Embeddings] provider={provider} model={model_name}")
+
+        if not HAS_SBERT:
+            raise RuntimeError(f"未安装 sentence-transformers，请安装依赖或使用其他模型。")
+        else:
+            return HuggingFaceEmbeddings(model_name=model_name)
 
     else:
         raise ValueError(f"[Embeddings] provider={provider} model={model_name}")
